@@ -1,0 +1,29 @@
+services:
+    receiptbot:
+        build: .
+        container_name: receiptbot
+        env_file: .env
+        image: receiptbot
+        restart: always
+
+        stdin_open: false
+        tty: false
+
+        read_only: true
+        tmpfs:
+          - /tmp:rw,noexec,nosuid,nodev,size=256k
+
+        security_opt:
+          - no-new-privileges:true
+        cap_drop:
+          - ALL
+
+        pids_limit: 256
+        mem_limit: 256m
+        cpus: 1
+
+        logging:
+            driver: json-file
+            options:
+                max-size: 64m
+                max-file: 4
