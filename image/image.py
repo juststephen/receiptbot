@@ -20,9 +20,13 @@ def print_image(printer: Escpos, image_bytes: bytes) -> None:
     # Scale image if larger than maximum
     width, height = image.size
     max_width = int(printer.profile.profile_data['media']['width']['pixels'])
-    if width > max_width:
-        target_height = int(height * max_width / width)
-        image = image.resize((max_width, target_height), Image.Resampling.LANCZOS)
+    max_height = 1024
+    # Determine the scale depending on the maximum size in both dimensions
+    scale = min(max_width / width, max_height / height, 1)
+    if scale < 1:
+        target_width = max(int(width * scale), 1)
+        target_height = max(int(height * scale), 1)
+        image = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
     width, height = image.size
     width_bytes = (width + 7) // 8
 
