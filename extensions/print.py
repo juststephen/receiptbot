@@ -130,7 +130,7 @@ class Print(commands.Cog):
             )
 
             if message:
-                self.unicode_char_print.text(f'{message.strip()}\n')
+                self.unicode_char_print.text(f'{message.strip()}\n', width=2)
             if image:
                 print_image(self.printer, image_bytes)
             if qr_content:

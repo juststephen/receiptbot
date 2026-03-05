@@ -1,5 +1,6 @@
 from escpos.constants import ESC  # pyright: ignore[reportMissingTypeStubs]
 from escpos.escpos import Escpos  # pyright: ignore[reportMissingTypeStubs]
+from typing import Literal
 import unicodedata
 
 from .cache import SLRUCache
@@ -26,7 +27,6 @@ class UnicodeCharacterPrinting(SLRUCache[str, int]):
 
         self.printer: Escpos = printer
         self.max_columns: int = self.printer.profile.get_columns('b')  # pyright: ignore[reportUnknownMemberType]
-        self.cur_columns: int = 0
 
         self.font = load_unifont()
 
@@ -74,9 +74,21 @@ class UnicodeCharacterPrinting(SLRUCache[str, int]):
         rows = len_bitmap // 3
         self._raw(ESC + b'&' + bytes([3, code, code, rows]) + bitmap)
 
-    def text(self, txt: str) -> None:
+    def text(
+        self,
+        txt: str,
+        *,
+        width: Literal[1, 2, 3, 4, 5, 6, 7, 8] = 1
+    ) -> None:
         """
         Print text using unifont.
+
+        Parameters
+        ----------
+        txt
+            Text to print.
+        width
+            Character width scalar
         """
         # Ensure font B is used
         self.printer.set(font='b')
@@ -84,13 +96,14 @@ class UnicodeCharacterPrinting(SLRUCache[str, int]):
         self._select_udc()
 
         codes = bytearray()
+        cur_columns: int = 0
         for char in txt:
             # Always skip control characters
             if unicodedata.category(char) == 'Cc':
                 codes.append(ord(char))
                 # Reset current column count on newline
                 if char == '\n':
-                    self.cur_columns = 0
+                    cur_columns = 0
                 continue
 
             # Fetch bitmap, defaults to a question mark
@@ -99,12 +112,12 @@ class UnicodeCharacterPrinting(SLRUCache[str, int]):
                 bitmap = self.font['?']
 
             # Update current row's column usage
-            if len(bitmap) == 2 and self.cur_columns + 2 > self.max_columns:
+            if len(bitmap) == 2 and cur_columns + 2 > self.max_columns // width:
                 # Prevent double width bitmaps from splitting across rows
                 codes.append(ord('\n'))
-                self.cur_columns = 2
+                cur_columns = 2
             else:
-                self.cur_columns = (self.cur_columns + len(bitmap)) % self.max_columns
+                cur_columns = (cur_columns + len(bitmap)) % (self.max_columns // width)
 
             # Check cache for character, define if not cached
             code, cache_hit = self[char]
