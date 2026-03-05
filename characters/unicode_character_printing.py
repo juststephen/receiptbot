@@ -88,6 +88,9 @@ class UnicodeCharacterPrinting(SLRUCache[str, int]):
             # Always skip control characters
             if unicodedata.category(char) == 'Cc':
                 codes.append(ord(char))
+                # Reset current column count on newline
+                if char == '\n':
+                    self.cur_columns = 0
                 continue
 
             # Fetch bitmap, defaults to a question mark
