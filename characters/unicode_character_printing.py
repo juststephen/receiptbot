@@ -25,6 +25,8 @@ class UnicodeCharacterPrinting(SLRUCache[str, int]):
         )
 
         self.printer: Escpos = printer
+        self.max_columns: int = self.printer.profile.get_columns('b')  # pyright: ignore[reportUnknownMemberType]
+        self.cur_columns: int = 0
 
         self.font = load_unifont()
 
@@ -92,6 +94,14 @@ class UnicodeCharacterPrinting(SLRUCache[str, int]):
             bitmap = self.font.get(char)
             if bitmap is None:
                 bitmap = self.font['?']
+
+            # Update current row's column usage
+            if len(bitmap) == 2 and self.cur_columns + 2 > self.max_columns:
+                # Prevent double width bitmaps from splitting across rows
+                codes.append(ord('\n'))
+                self.cur_columns = 2
+            else:
+                self.cur_columns = (self.cur_columns + len(bitmap)) % self.max_columns
 
             # Check cache for character, define if not cached
             code, cache_hit = self[char]
